@@ -1,0 +1,2 @@
+# Only for separate.py. Pulls in PyTorch, and downloads the separation model on first use.
+audio-separator[cpu]>=0.48

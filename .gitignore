@@ -1,0 +1,34 @@
+# Source media, stems, subtitles and dubs stay out of this repository.
+*.wav
+*.mp3
+*.flac
+*.m4a
+*.aac
+*.ac3
+*.mka
+*.mkv
+*.mp4
+*.avi
+*.webm
+*.ass
+*.ssa
+*.srt
+*.ckpt
+*.torrent
+
+# Working folders, if someone runs the pipeline here anyway.
+redub/
+work/
+stems/
+takes/
+gen/
+out/
+previews/
+
+# Secrets and environments.
+.env
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+.DS_Store

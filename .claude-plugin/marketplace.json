@@ -1,0 +1,12 @@
+{
+  "name": "anime-redub",
+  "owner": {"name": "Nikita Bogdanov"},
+  "metadata": {"description": "A skill and scripts for re-dubbing anime scenes into Russian with distinct AI voices."},
+  "plugins": [
+    {
+      "name": "anime-redub",
+      "source": "./",
+      "description": "Re-dub anime scenes into Russian with distinct AI voices, on ElevenLabs Text to Dialogue v4 and Scribe."
+    }
+  ]
+}

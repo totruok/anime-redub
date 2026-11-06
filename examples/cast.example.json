@@ -1,0 +1,4 @@
+{
+ "hero": {"voice_id": "your-voice-id", "name": "Моя озвучка Герой", "letter": "A"},
+ "rival": {"voice_id": "your-voice-id", "name": "Моя озвучка Соперник", "letter": "C"}
+}

@@ -1,0 +1,20 @@
+{
+ "project": "Моя озвучка",
+ "common": "Native Russian speaker with a neutral standard accent. Studio-quality voice-over recording: dry, close microphone, no room echo, no reverb, no background noise.",
+ "characters": [
+  {
+   "key": "hero",
+   "name": "Герой",
+   "role": "наивный молодой герой",
+   "description": "Young man, about 18. Light, bright tenor, clearly higher than an average male voice. Sincere, slightly naive and awkward, stammers when nervous but can sound heroic. Animated adventure protagonist with good comic timing.",
+   "text": "[confidently] Нет. Я обязательно вернусь. [nervous] Ч-что это было? [shouts] Стой, дальше ты не пройдёшь! [voice trembling] А ведь я обещал, что всё будет хорошо…"
+  },
+  {
+   "key": "rival",
+   "name": "Соперник",
+   "role": "самовлюблённый злодей",
+   "description": "Man in his forties. Deep, gravelly baritone with theatrical pride. Enjoys his own speeches, turns quickly from smug to furious. Animated fantasy villain with a touch of comedy.",
+   "text": "[proud, theatrical] Перед тобой тот, кого боится весь север! [amused] Ты правда решил меня остановить? [shouts, mad] Я сотру тебя в порошок! [scared] Э-это невозможно…"
+  }
+ ]
+}
