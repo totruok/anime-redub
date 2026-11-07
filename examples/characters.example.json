@@ -1,20 +1,20 @@
 {
- "project": "Моя озвучка",
- "common": "Native Russian speaker with a neutral standard accent. Studio-quality voice-over recording: dry, close microphone, no room echo, no reverb, no background noise.",
+ "project": "My dub",
+ "common": "Neutral standard accent. Studio-quality voice-over recording: dry, close microphone, no room echo, no reverb, no background noise.",
  "characters": [
   {
    "key": "hero",
-   "name": "Герой",
-   "role": "наивный молодой герой",
+   "name": "Hero",
+   "role": "naive young hero",
    "description": "Young man, about 18. Light, bright tenor, clearly higher than an average male voice. Sincere, slightly naive and awkward, stammers when nervous but can sound heroic. Animated adventure protagonist with good comic timing.",
-   "text": "[confidently] Нет. Я обязательно вернусь. [nervous] Ч-что это было? [shouts] Стой, дальше ты не пройдёшь! [voice trembling] А ведь я обещал, что всё будет хорошо…"
+   "text": "[confidently] No. I will come back, I promise. [nervous] W-what was that? [shouts] Stop, you are not getting past me! [voice trembling] But I told them everything would be fine…"
   },
   {
    "key": "rival",
-   "name": "Соперник",
-   "role": "самовлюблённый злодей",
+   "name": "Rival",
+   "role": "vain villain",
    "description": "Man in his forties. Deep, gravelly baritone with theatrical pride. Enjoys his own speeches, turns quickly from smug to furious. Animated fantasy villain with a touch of comedy.",
-   "text": "[proud, theatrical] Перед тобой тот, кого боится весь север! [amused] Ты правда решил меня остановить? [shouts, mad] Я сотру тебя в порошок! [scared] Э-это невозможно…"
+   "text": "[proud, theatrical] You stand before the one the whole north fears! [amused] Did you really decide to stop me? [shouts, mad] I will grind you to dust! [scared] Th-this is impossible…"
   }
  ]
 }

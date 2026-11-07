@@ -1,26 +1,95 @@
 # anime-redub
 
-Домашняя переозвучка аниме на русский: у каждого персонажа свой голос, реплики встают на начала фраз оригинала, а японский остаётся тихо под дубляжом. Работает на ElevenLabs Text to Dialogue v4 и Scribe. Перевод, теги и решения ведёт Claude Code по готовому скиллу, а скрипты делают всё, что можно посчитать.
+Fully automatic voice-over dubbing for anime and other video, in the language you choose. One launch ends in a finished video: every character gets their own AI voice, each line starts where the original phrase starts, and the original stays quietly underneath. It runs on ElevenLabs Text to Dialogue v4 and Scribe. Claude Code handles the translation, tags and decisions through a ready-made skill, and scripts do everything that can be computed.
 
-*A skill and scripts for re-dubbing anime scenes into Russian with distinct AI voices, using ElevenLabs Text to Dialogue v4 and Scribe. The skill is in English, the target language is Russian only.*
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/pipeline-dark.svg">
+  <img src="docs/pipeline-light.svg" alt="The pipeline in three stages. Prepare: separate voice from music, draft the scene, measure the original, translate to fit. Perform: design voices, choose them automatically or by ear, add emotion tags, generate the dialogue, cut it into takes. Fit and mix: fit takes to the original phrases, process and mix, check the levels, render, and optionally listen and ask for changes. Claude decides, scripts compute, ElevenLabs calls are paid within your budget, and your ear is optional.">
+</picture>
 
-## Что есть на самом деле
+## How to use it
 
-Конвейер проверен от начала до конца на **одной сцене в 2:40**. Целую серию им ещё не озвучивали, поэтому там возможны проблемы, которых сцена не показала. Озвучивать пока можно только на русский: сопоставление слов рассчитано на кириллицу. Качество оценивал один слушатель, а автотесты проверяют только код, но не звук.
+Open Claude Code in a separate working folder and write something like this:
 
-## Сколько стоит
+> Dub the scene from 7:05 to 9:45 of `~/Video/show_01.mkv` into Spanish, with a budget of 3 dollars.
 
-| Что | Цена |
+Or launch the skill with flags:
+
+```
+/anime-redub:anime-redub --language es --budget 3 ~/Video/show_01.mkv 7:05-9:45
+```
+
+| What | Flag | Default |
+|---|---|---|
+| Source file | a path | required |
+| Window | `7:05-9:45` | the whole file, from the first spoken line to the last |
+| Target language | `--language es` | required |
+| Spending limit | `--budget 3` | 5 US dollars |
+| Choose voices by ear | `--pick-by-ear` | off: chosen automatically |
+
+**It spends money without asking, up to the limit.** The paid scripts enforce the limit themselves, counting each request before it is sent. It works from estimates at the documented prices, not from your account's balance. If you would rather approve each payment, or go 15 seconds at a time, say so when you launch.
+
+To run with nobody at the keyboard, use print mode:
+
+```bash
+claude -p "Dub the scene from 7:05 to 9:45 of ~/Video/show_01.mkv into Spanish, with a budget of 3 dollars." --allowedTools "Bash,Read,Write,Edit"
+```
+
+Claude then goes through the steps in [SKILL.md](skills/anime-redub/SKILL.md) on its own:
+
+1. Separates voice from music, in chunks that can resume.
+2. Finds the real phrases in the original, with their length, loudness and pitch.
+3. Translates to the length of those phrases.
+4. Makes voices with Voice Design, and keeps the previews most unlike each other. With `--pick-by-ear`, it stops once so you can choose on an audition page.
+5. Adds emotion tags that follow the original performance.
+6. Generates the scene in blocks, one request per block, so the voices do not drift.
+7. Fits the takes to the original phrase onsets, speeding up by at most 1.22 times, and redoes lines that still run over, at most twice per block.
+8. Mixes with the original voice at −14 dB and the music at −5 dB.
+9. Checks the levels, renders the video and reports what it spent, what it chose and where a person should listen.
+
+The scripts also run without Claude, but then the translation, the tags and the choice of what to redo are yours. Commands and formats are in [SKILL.md](skills/anime-redub/SKILL.md) and [formats.md](skills/anime-redub/references/formats.md).
+
+## What has actually been tested
+
+**One 2:40 scene was dubbed from Japanese into Russian with real voices and judged by ear**, by one listener. Those steps were run by hand, and voices were chosen by ear.
+
+**The automatic run has gone through the real API once**, on a 14-second scene from Japanese into English. One launch produced the video, for about 6 cents by the budget's estimate. Scribe then found every word in the final mix, with each line starting within 0.1 s of the original phrase. Its one listener liked how it sounded. That is a good first sign from 14 seconds and two characters, not proof for a whole scene. Choosing voices by numbers could not replace listening when it was tried on the Russian scene, so expect to want `--pick-by-ear` sometimes.
+
+The spending limit has only been reached against a local stand-in for the ElevenLabs API, which returns tones instead of speech. Voice Design reported no cost in that one real run, so its share of the estimate is unconfirmed.
+
+The print-mode command above has not completed a run: its one attempt stopped at login. The automatic runs were Claude Code sessions that were allowed more tools than that command lists, so try that command on something short first.
+
+Target languages other than Russian and English are covered by the same stand-in and by automated tests, so start with something short. Any other source language should work, since only Scribe reads it, but only Japanese has been run. A whole episode has not been dubbed, so it may show problems that one scene did not. The automated tests check the code, not the sound.
+
+## Choosing the language
+
+The target language is a parameter of each run, given as a code such as `es`, `de`, `fr`, `ja`, `ko`, `zh`, `pt` or `ru`. To see all of the 90+ codes:
+
+```bash
+python skills/anime-redub/scripts/languages.py
+```
+
+| Script | `--language` |
 |---|---|
-| Сцена 2:40, один проход | около $0,17 |
-| Серия, один чистый проход | около $1,50 |
-| Серия с переделками | $2–3 |
-| Новый голос Voice Design | около цента на персонажа, это расчёт |
-| Отделение голоса от музыки | бесплатно, на ноутбуке около 2 часов на серию |
+| `design_voices.py` | Required. The language the voices will speak. |
+| `dialogue.py` | Required. The language of the lines. |
+| `scribe.py` | Optional. The language of the audio. Left out, Scribe detects it. |
 
-Цены взяты из документации ElevenLabs на ноябрь 2026 года: $0,08 за 1000 символов и $0,22 за час Scribe. Серия посчитана по сцене с умножением на 8 по объёму текста, реально её не генерировали. Теги оплачиваются как обычные символы и дают примерно половину счёта. Перевод и теги расходуют вашу подписку на Claude, сюда это не входит.
+`design_voices.py` and `dialogue.py` have no default and refuse an unknown code before any paid call. The ElevenLabs reference says a code the model does not support is ignored, and this repository has not tested that. `scribe.py` sends its code as given. Nothing checks that your lines and voices are really in that language, so pass the same code to both.
 
-## Установка
+## What it costs
+
+| What | Price |
+|---|---|
+| A 2:40 scene, one pass | about $0.17 |
+| An episode, one clean pass | about $1.50 |
+| An episode with redos | $2–3 |
+| Voice Design | about a cent per story character tried, by calculation |
+| Separating voice from music | free, about 2 hours per episode on a laptop |
+
+Prices come from the ElevenLabs documentation as of November 2026: $0.08 per 1,000 characters of text and $0.22 per hour of Scribe. The figures were worked out on the Russian scene, and another language will have a different number of characters. The episode is that scene multiplied by 8 by volume of text, and no episode was actually generated. Tags are billed as ordinary characters and made up about half of the bill. Translation and tags use your Claude subscription, which is not counted here.
+
+## Install
 
 ```bash
 brew install ffmpeg rubberband        # Linux: apt install ffmpeg rubberband-cli
@@ -28,55 +97,35 @@ git clone https://github.com/totruok/anime-redub.git
 cd anime-redub
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-pip install -r requirements-separate.txt    # большая установка, нужна для separate.py
-export ELEVENLABS_API_KEY=...         # или файл .env в рабочей папке
+pip install -r requirements-separate.txt    # a big install, needed for separate.py
+export ELEVENLABS_API_KEY=...         # or a .env file in the working folder
 python skills/anime-redub/scripts/doctor.py
 ```
 
-Скилл для Claude Code ставится как плагин. Его скриптам нужны те же зависимости, так что запускайте Claude Code из активированного окружения.
+The skill for Claude Code installs as a plugin. Its scripts need the same dependencies, so start Claude Code from the activated environment.
 
 ```
 /plugin marketplace add totruok/anime-redub
 /plugin install anime-redub@anime-redub
 ```
 
-## Как пользоваться
+## Why the balance is what it is
 
-Откройте Claude Code в отдельной рабочей папке и напишите примерно так:
+Dubs keep the original at very different levels, and there is no single standard. The −14 dB voice and −5 dB music were measured from one modern dub and adjusted to our voice level. The measurements, and how to take them from any other dub, are in [mix-recipes.md](skills/anime-redub/references/mix-recipes.md).
 
-> Переозвучь сцену с 7:05 до 9:45 из `~/Video/show_01.mkv`. Субтитры рядом, начни с 15 секунд.
+## Rights
 
-Claude проходит шаги из [SKILL.md](skills/anime-redub/SKILL.md) и останавливается перед каждой тратой:
+This repository holds code and method only. Video, audio, subtitles and dubs stay out of it, and `tests/test_repo_hygiene.py` checks that. Anime belongs to its rights holders: the result is for personal viewing, and publishing it is your own responsibility. Voices are created with Voice Design. This project does not offer cloning of real people, the original actors included.
 
-1. Отделяет голос от музыки, по частям и с докачкой.
-2. Находит настоящие фразы в оригинале, их длину, громкость и высоту.
-3. Переводит под длину этих фраз.
-4. Делает голоса через Voice Design. Вы выбираете их на слух на странице прослушивания.
-5. Расставляет теги эмоций по игре оригинала.
-6. Генерирует сцену блоками, по одному запросу на блок, чтобы голоса не плавали.
-7. Подгоняет дубли к началам фраз оригинала, ускоряя не больше чем в 1,22 раза.
-8. Сводит с японским на −14 дБ и музыкой на −5 дБ.
-9. Проверяет уровни и рендерит видео. Решает ваше ухо.
-
-Скрипты можно запускать и без Claude, но перевод, теги и выбор, что переделать, тогда на вас. Команды и форматы описаны в [SKILL.md](skills/anime-redub/SKILL.md) и [formats.md](skills/anime-redub/references/formats.md).
-
-## Почему баланс именно такой
-
-Разные озвучки держат оригинал очень по-разному, и единого стандарта нет. Японский на −14 дБ и музыка на −5 дБ сняты с замера современной озвучки и подогнаны под наш уровень голоса. Замеры и способ снять их с любой другой озвучки: [mix-recipes.md](skills/anime-redub/references/mix-recipes.md).
-
-## Права
-
-Здесь только код и метод. В репозиторий не попадают видео, аудио, субтитры и дубли, это проверяет тест `tests/test_repo_hygiene.py`. Аниме принадлежит правообладателям: результат подходит для личного просмотра, а публикация уже ваша ответственность. Голоса создаются через Voice Design. Клонировать реальных людей, включая актёров оригинала, этот проект не предлагает.
-
-## Тесты
+## Tests
 
 ```bash
 pip install -r requirements-dev.txt
 pytest
 ```
 
-Тесты работают на синтетическом звуке и без сети, поэтому платных запросов не делают. Нужны ffmpeg и rubberband.
+The tests use synthetic sound and no outside network, so they make no paid requests. One runs the whole pipeline against `tests/fake_elevenlabs.py`, a local stand-in for the API. They need ffmpeg and rubberband.
 
-## Лицензия
+## License
 
 MIT

@@ -133,7 +133,7 @@ def main():
             if end > w1:
                 print(f"WARNING: line {l['id']} runs {end - w1:.2f} s past the end of the window and is cut: end the window in a pause")
             placed.append((l["id"], start, end))
-            rows.append((l["id"], l["who"], orig_on, orig_off, start, end, part.get("tempo", 1.0), gain_db, l["ru"]))
+            rows.append((l["id"], l["who"], orig_on, orig_off, start, end, part.get("tempo", 1.0), gain_db, l["text"]))
         refs.setdefault(f"{l['who']}|{l.get('env', 'default')}", []).append(src)
         a, b = max(0, idx(orig_on - 0.12)), min(n, idx(orig_off + 0.12))
         # Without voice_under_db the original line is removed; with it the line stays, lowered, under the dub.

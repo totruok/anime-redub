@@ -1,6 +1,6 @@
 # Acting, tags and voices
 
-Everything here was learned on one scene with `eleven_v4`, judged by one listener. Treat it as a good starting point, and check the current ElevenLabs documentation for tags, since v4 has many more than are listed here.
+Everything here was learned on one scene dubbed into Russian with `eleven_v4`, judged by one listener. Treat it as a good starting point for any language, and check the current ElevenLabs documentation for tags, since v4 has many more than are listed here.
 
 ## Settings
 
@@ -17,7 +17,7 @@ Read what the original actor does:
 | Line much louder than the scene's median | `[shouts]`, `[screaming]`, `[powerful]` |
 | Line much quieter | `[softly]`, `[quietly]`, `[whispers]` |
 | Wide pitch `range` | a strong emotion tag, such as `[overjoyed]` or `[tearful, trembling]` |
-| Emotion turns inside the line | one tag at each turn: `[dramatic] Издалека… [weary] дорога была долгой.` |
+| Emotion turns inside the line | one tag at each turn: `[dramatic] From so far away… [weary] it was a long road.` |
 | Original is fast or short | `[speedy]`, `[snappy]`, `[rushed]` |
 | Gasp before a word | `[gasps]`, plus `"lead": true` on the line |
 
@@ -34,12 +34,12 @@ Automatic emotion recognition from the audio was tried and dropped: on anime it 
 
 ## Voices
 
-Voice Design previews give three takes per character with the same text. You pay for the preview text only, which comes to about a cent per character tried at the usual rate. That is a calculation, since the API page lists no separate price. Saving a chosen voice is free. A description that worked has this shape: age, pitch and timbre in plain words, temperament, then the kind of role.
+Voice Design previews give three takes per character with the same text. You pay for the preview text only, which comes to about a cent per story character tried at the usual rate. That is a calculation, since the API page lists no separate price. Saving a chosen voice is free. A description that worked has this shape: age, pitch and timbre in plain words, temperament, then the kind of role.
 
 > Young man, about 18. Light, bright tenor, clearly higher than an average male voice. Sincere, slightly naive and awkward, stammers when nervous but can sound heroic. Animated adventure protagonist with good comic timing.
 
-- Put the shared recording conditions in `common`: a native speaker, a dry, close microphone, no room echo. A roomy preview sounds like someone recording in a bathroom, and that follows the character into every scene.
+- Put the shared recording conditions in `common`: a dry, close microphone, no room echo. `design_voices.py` adds the native speaker from `--language`. A roomy preview sounds like someone recording in a bathroom, and that follows the character into every scene.
 - Make the preview `text` run through the character's real range, from calm to shouting, since that is what the voice has to survive.
-- Let the user pick by ear from the audition page. Picking voices by acoustic numbers was tried and could not replace listening.
+- `save_voices.py --auto` chooses without a listener: a preview in the right language, as unlike the voices already chosen as possible. It keeps characters apart and cannot judge acting. Picking voices by acoustic numbers was tried on the tested scene and could not replace listening, so offer `--pick-by-ear` when the voices disappoint.
 - Voices from the shared library join the account on first use and take up slots, so don't try them casually. Designed voices are saved only when chosen.
 - Do not clone real people, and that includes the original actors. The ElevenLabs Dubbing product does clone the original cast, costs from $2.20 per minute (about $55 per episode) and did not allow editing the translation through the API below Enterprise, which is why this pipeline does not use it.

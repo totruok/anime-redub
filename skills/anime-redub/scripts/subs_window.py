@@ -1,9 +1,9 @@
 """List subtitle lines in a time window, and optionally write them out as a draft scene.
 
-usage: subs_window.py SUBS.(ass|srt|tsv) START END [--draft SCENE.json] [--style NAME] [--offset SECONDS]
+usage: subs_window.py SUBS.(ass|srt|tsv) START END [--draft SCENE.json] [--force] [--style NAME] [--offset SECONDS]
 
 Subtitle times are only anchors: scene_measure.py finds the real phrases later. The
-draft has an empty "ru" and who="?" on every line, for you to fill in by meaning, by
+draft has an empty "text" and who="?" on every line, for you to fill in by meaning, by
 the frames and by the subtitles themselves. Songs and on-screen signs often come along:
 the style counts printed first show which style to keep with --style.
 
@@ -12,6 +12,7 @@ the audio it heard, so pass --offset with the source second where that audio beg
 """
 import argparse
 import json
+import os
 import re
 
 
@@ -63,12 +64,23 @@ def read_any(path):
     return read_tsv(text) if lower.endswith(".tsv") else read_srt(text)
 
 
+def holds_work(path):
+    if not os.path.exists(path):
+        return False
+    try:
+        with open(path, encoding="utf-8") as f:
+            return any(l.get("text") or l.get("who") != "?" for l in json.load(f)["lines"])
+    except (ValueError, KeyError, TypeError, AttributeError):
+        return True
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("subs")
     ap.add_argument("start", type=float)
     ap.add_argument("end", type=float)
     ap.add_argument("--draft")
+    ap.add_argument("--force", action="store_true", help="replace a draft that already has text or who filled in")
     ap.add_argument("--style", help="keep only this style, to drop songs and signs")
     ap.add_argument("--offset", type=float, default=0.0, help="added to every time in the file")
     a = ap.parse_args()
@@ -84,7 +96,9 @@ def main():
     for r in picked:
         print(f"{r['start']:8.2f} {r['end']:8.2f} [{r['style']}|{r['name']}] {r['text']}")
     if a.draft:
-        lines = [{"id": f"{i:02d}", "who": "?", "start": r["start"], "end": r["end"], "original": r["text"], "env": "default", "ru": ""} for i, r in enumerate(picked, 1)]
+        if holds_work(a.draft) and not a.force:
+            raise SystemExit(f"{a.draft} already has text or who filled in, so it was left as it is. Draft to another name and copy the lines over, or pass --force to replace it.")
+        lines = [{"id": f"{i:02d}", "who": "?", "start": r["start"], "end": r["end"], "original": r["text"], "env": "default", "text": ""} for i, r in enumerate(picked, 1)]
         with open(a.draft, "w", encoding="utf-8") as f:
             json.dump({"lines": lines}, f, ensure_ascii=False, indent=1)
         print(f"wrote {len(lines)} draft lines to {a.draft}")

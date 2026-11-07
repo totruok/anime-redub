@@ -1,7 +1,8 @@
 """Transcribe with diarization through ElevenLabs Scribe.
 
-usage: scribe.py AUDIO OUT.json [--model scribe_v2] [--lang jpn] [--speakers N]
-Skips the call if OUT.json already exists, so a rerun never pays twice.
+usage: scribe.py AUDIO OUT.json [--model scribe_v2] [--language CODE] [--speakers N]
+Without --language, Scribe detects the language itself. Pass an ISO 639-1 or ISO 639-3 code to set it.
+Skips the call if OUT.json already exists, so a rerun never pays twice, whatever its flags. To hear it again, delete OUT.json.
 Also writes OUT.lines.tsv: start, end, speaker, text, one utterance per line.
 """
 import argparse
@@ -11,6 +12,7 @@ import time
 
 import requests
 
+import budget
 import el
 
 
@@ -18,6 +20,8 @@ def utterances(words, gap=0.7):
     out, cur = [], None
     for w in words:
         if w.get("type") == "spacing":
+            if cur:
+                cur["text"] += w["text"]
             continue
         sp = w.get("speaker_id") or "?"
         is_event = w.get("type") == "audio_event"
@@ -40,23 +44,26 @@ def main():
     ap.add_argument("audio")
     ap.add_argument("out")
     ap.add_argument("--model", default="scribe_v2")
-    ap.add_argument("--lang", default="jpn")
+    ap.add_argument("--language", help="language of the audio; left out, Scribe detects it")
     ap.add_argument("--speakers", type=int)
     a = ap.parse_args()
 
     if os.path.exists(a.out):
         print(f"exists, not calling the API again: {a.out}", flush=True)
-        data = json.load(open(a.out))
+        data = json.load(open(a.out, encoding="utf-8"))
     else:
         form = {
             "model_id": a.model,
-            "language_code": a.lang,
             "diarize": "true",
             "tag_audio_events": "true",
             "timestamps_granularity": "word",
         }
+        if a.language:
+            form["language_code"] = a.language
         if a.speakers:
             form["num_speakers"] = str(a.speakers)
+        cost = budget.scribe_cost(a.audio)
+        budget.charge(cost, f"Scribe on {a.audio}")
         size = os.path.getsize(a.audio) / 1e6
         print(f"uploading {a.audio} ({size:.0f} MB), model {a.model}", flush=True)
         t = time.time()
@@ -68,18 +75,20 @@ def main():
                 files={"file": (os.path.basename(a.audio), f)},
                 timeout=1800,
             )
+        if not r.ok:
+            budget.refund(cost)
         el.check(r)
         data = r.json()
         tmp = a.out + ".tmp"
-        json.dump(data, open(tmp, "w"), ensure_ascii=False)
+        json.dump(data, open(tmp, "w", encoding="utf-8"), ensure_ascii=False)
         os.replace(tmp, a.out)
         print(f"done in {time.time() - t:.0f}s", flush=True)
 
     utts = utterances(data.get("words", []))
     tsv = os.path.splitext(a.out)[0] + ".lines.tsv"
-    with open(tsv, "w") as f:
+    with open(tsv, "w", encoding="utf-8") as f:
         for u in utts:
-            f.write(f"{u['start']:.2f}\t{u['end']:.2f}\t{u['speaker']}\t{u['text']}\n")
+            f.write(f"{u['start']:.2f}\t{u['end']:.2f}\t{u['speaker']}\t{u['text'].strip()}\n")
     speakers = {}
     for u in utts:
         speakers.setdefault(u["speaker"], [0, 0.0])

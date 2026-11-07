@@ -1,9 +1,9 @@
 {
   "name": "anime-redub",
-  "description": "Re-dub anime scenes into Russian with distinct AI voices, on ElevenLabs Text to Dialogue v4 and Scribe.",
-  "version": "0.1.0",
+  "description": "Re-dub anime scenes into the language you choose with distinct AI voices, on ElevenLabs Text to Dialogue v4 and Scribe.",
+  "version": "0.2.0",
   "author": {"name": "Nikita Bogdanov"},
   "repository": "https://github.com/totruok/anime-redub",
   "license": "MIT",
-  "keywords": ["anime", "dubbing", "voice-over", "elevenlabs", "russian"]
+  "keywords": ["anime", "dubbing", "voice-over", "elevenlabs", "translation"]
 }

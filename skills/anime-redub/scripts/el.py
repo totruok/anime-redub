@@ -4,7 +4,7 @@ import sys
 
 import requests
 
-API = "https://api.elevenlabs.io"
+API = os.environ.get("ELEVENLABS_API_URL", "https://api.elevenlabs.io")  # tests/fake_elevenlabs.py stands in for it
 KEY_FILE = ".env"
 
 

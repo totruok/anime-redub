@@ -11,16 +11,15 @@ import argparse
 import json
 import re
 
+from budget import DIALOGUE_PER_1K_CHARS, SCRIBE_PER_HOUR
 from make_blocks import check_lines
 
-DIALOGUE_PER_1K_CHARS = 0.08  # Text to Dialogue with eleven_v4
-SCRIBE_PER_HOUR = 0.22
 CHARS_PER_SECOND = 19.6  # measured: 1913 characters with tags came back as 97.5 s of speech
 
 
 def estimate(lines, passes=1.0, scale=1.0, source_minutes=0.0):
-    chars = sum(len(l["ru"]) for l in lines) * scale
-    spoken = sum(len(re.sub(r"\[[^\]]*\]", "", l["ru"]).strip()) for l in lines) * scale
+    chars = sum(len(l["text"]) for l in lines) * scale
+    spoken = sum(len(re.sub(r"\[[^\]]*\]", "", l["text"]).strip()) for l in lines) * scale
     generation = chars / 1000 * DIALOGUE_PER_1K_CHARS * passes
     seconds = chars / CHARS_PER_SECOND
     # Scribe hears each generated request once, the finished mix once (about twice the speech), and the source if asked.
@@ -40,7 +39,7 @@ def main():
     e = estimate(lines, a.passes, a.scale, a.source_minutes)
     print(f"{e['chars']:.0f} characters with tags ({e['spoken']:.0f} without), about {e['requests']:.1f} requests")
     print(f"generation ${e['generation']:.2f}, Scribe ${e['scribe']:.2f}, total about ${e['total']:.2f} at {a.passes:g} passes")
-    print("Not counted: Voice Design, about 1 cent per character tried (billed by preview text; saving a voice is free).")
+    print("Not counted: Voice Design, about 1 cent per story character tried (billed by preview text; saving a voice is free).")
     print("Prices come from the documentation, not from your plan.")
 
 

@@ -14,6 +14,9 @@ import numpy as np
 import soundfile as sf
 
 
+MIN_LINES_FOR_LAG = 20  # shorter scenes gave false alarms
+
+
 def phrases(x, sr, t0, a0, a1):
     n = int(0.02 * sr)
     frames = len(x) // n
@@ -63,12 +66,37 @@ def phrases(x, sr, t0, a0, a1):
     return out
 
 
+def subtitle_lag(mono, sr, t0, lines, reach=15.0, step=0.05):
+    """How far to move the subtitles so most of their time falls on speech: the shift in seconds, and the share gained."""
+    n = int(step * sr)
+    frames = len(mono) // n
+    db = 20 * np.log10(np.sqrt(np.mean(mono[: frames * n].reshape(frames, n) ** 2, axis=1)) + 1e-9)
+    voice = db > max(db.max() - 35, -60)
+    subs = np.zeros(frames, dtype=bool)
+    for l in lines:
+        subs[max(0, int((l["start"] - t0) / step)) : max(0, int((l["end"] - t0) / step))] = True
+    total = max(int(subs.sum()), 1)
+
+    def overlap(shift):
+        return int(np.sum(subs[max(-shift, 0) : frames - max(shift, 0)] & voice[max(shift, 0) : frames + min(shift, 0)]))
+
+    reach_frames = min(int(reach / step), frames - 1)
+    best = max(range(-reach_frames, reach_frames + 1), key=overlap)
+    return best * step, (overlap(best) - overlap(0)) / total
+
+
 def main():
-    scene = json.load(open(sys.argv[1]))
+    scene = json.load(open(sys.argv[1], encoding="utf-8"))
     voc, sr = sf.read(sys.argv[2], always_2d=True, dtype="float32")
     t0 = float(sys.argv[3])
     mono = voc.mean(axis=1)
     lines = scene["lines"]
+    if len(lines) >= MIN_LINES_FOR_LAG:
+        lag, gain = subtitle_lag(mono, sr, t0, lines)
+        if abs(lag) >= 0.4 and gain >= 0.05:
+            print(f"WARNING: subtitles sit about {lag:+.1f} s from the voice; they may not fit this rip. Add that to every start and end, and measure again.", flush=True)
+    else:
+        print(f"subtitle timing not checked: fewer than {MIN_LINES_FOR_LAG} lines", flush=True)
     res = {}
     for i, l in enumerate(lines):
         lo = l["start"] - 0.45 if i == 0 else max(l["start"] - 0.45, (lines[i - 1]["end"] + l["start"]) / 2)
@@ -98,7 +126,7 @@ def main():
         }
         print(
             f"{l['id']} {l['who']:<8} lvl {rms:6.1f} f0 {str(res[l['id']]['f0']):>4} rng {str(res[l['id']]['range']):>5} "
-            f"voiced {res[l['id']]['voiced']:4.2f} talk {talk:5.2f} {ph} | {l['ru']}",
+            f"voiced {res[l['id']]['voiced']:4.2f} talk {talk:5.2f} {ph} | {l['text']}",
             flush=True,
         )
     json.dump(res, open(sys.argv[4], "w"), ensure_ascii=False, indent=1)

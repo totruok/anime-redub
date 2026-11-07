@@ -43,11 +43,11 @@ function summary() {
 function update() { document.getElementById('choice').textContent = summary(); }
 document.addEventListener('change', update);
 document.getElementById('copy').addEventListener('click', async e => {
-  try { await navigator.clipboard.writeText(summary()); e.target.textContent = 'Скопировано'; }
-  catch (_) { e.target.textContent = 'Выдели текст слева'; }
+  try { await navigator.clipboard.writeText(summary()); e.target.textContent = 'Copied'; }
+  catch (_) { e.target.textContent = 'Select the text on the left'; }
 });
 document.querySelectorAll('audio').forEach(a => {
-  const show = () => { a.closest('label').querySelector('.dur').textContent = a.duration.toFixed(1) + ' с'; };
+  const show = () => { a.closest('label').querySelector('.dur').textContent = a.duration.toFixed(1) + ' s'; };
   if (a.readyState >= 1) show(); else a.addEventListener('loadedmetadata', show);
   a.addEventListener('play', () => document.querySelectorAll('audio').forEach(o => { if (o !== a) o.pause(); }));
 });
@@ -61,7 +61,7 @@ def main():
     parts = []
     for c in cfg["characters"]:
         meta = json.load(open(os.path.join(previews_dir, f"{c['key']}.json")))
-        spoken = re.sub(r"\[[^\]]*\]\s*", "", c["text"])
+        spoken = re.sub(r"\[[^\]]*\]\s*", "", meta.get("sent", {}).get("text", c["text"]))
         rows = []
         for p in meta["previews"]:
             data = base64.b64encode(open(os.path.join(previews_dir, p["file"]), "rb").read()).decode()
@@ -77,14 +77,14 @@ def main():
             f'<p class="line">{html.escape(spoken)}</p>{"".join(rows)}</section>'
         )
     page = (
-        '<!doctype html><html lang="ru"><head><meta charset="utf-8">'
+        '<!doctype html><html lang="en"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width,initial-scale=1">'
-        f"<title>Голоса {html.escape(cfg.get('project', ''))}</title><style>{STYLE}</style></head><body><main>"
-        "<h1>Голоса персонажей</h1>"
-        '<p class="lead">У каждого персонажа три варианта с одним и тем же текстом. '
-        "Отметь лучший, потом пришли мне строку снизу.</p>"
+        f"<title>Voices: {html.escape(cfg.get('project', ''))}</title><style>{STYLE}</style></head><body><main>"
+        "<h1>Character voices</h1>"
+        '<p class="lead">Each character has three takes of the same text. '
+        "Mark the best one, then send the line at the bottom back to Claude.</p>"
         + "".join(parts)
-        + '</main><div class="bar"><div><span id="choice"></span><button id="copy" type="button">Скопировать</button></div></div>'
+        + '</main><div class="bar"><div><span id="choice"></span><button id="copy" type="button">Copy</button></div></div>'
         f"<script>{SCRIPT}</script></body></html>"
     )
     with open(out, "w", encoding="utf-8") as f:

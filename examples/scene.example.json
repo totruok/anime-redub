@@ -1,5 +1,5 @@
 {"lines": [
- {"id": "01", "who": "hero", "start": 12.4, "end": 14.1, "original": "the line as the subtitles have it", "env": "outdoors", "ru": "[shouts, mad] Стой! Дальше ты не пройдёшь!"},
- {"id": "02", "who": "rival", "start": 14.9, "end": 16.8, "original": "the line as the subtitles have it", "env": "outdoors", "ru": "[low voice, amused] Ты правда… [threatening] решил меня остановить?"},
- {"id": "03", "who": "hero", "start": 17.5, "end": 18.2, "original": "the line as the subtitles have it", "env": "outdoors", "lead": true, "ru": "[gasps] [nervous] Э-это…"}
+ {"id": "01", "who": "hero", "start": 12.4, "end": 14.1, "original": "the line as the subtitles have it", "env": "outdoors", "text": "[shouts, mad] Stop! You are not getting past me!"},
+ {"id": "02", "who": "rival", "start": 14.9, "end": 16.8, "original": "the line as the subtitles have it", "env": "outdoors", "text": "[low voice, amused] Did you really… [threatening] decide to stop me?"},
+ {"id": "03", "who": "hero", "start": 17.5, "end": 18.2, "original": "the line as the subtitles have it", "env": "outdoors", "lead": true, "text": "[gasps] [nervous] Th-this…"}
 ]}

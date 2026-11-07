@@ -1,11 +1,12 @@
 import json
 
 import numpy as np
+import pytest
 import soundfile as sf
 
 from conftest import SR, run_script, tone, write_json, write_wav
 
-SCENE = {"lines": [{"id": "01", "who": "hero", "start": 2.0, "end": 3.5, "env": "default", "ru": "[shouts] Реплика"}]}
+SCENE = {"lines": [{"id": "01", "who": "hero", "start": 2.0, "end": 3.5, "env": "default", "text": "[shouts] A line"}]}
 
 
 def build(folder, **mix_flags):
@@ -75,7 +76,7 @@ def test_check_levels_reports_the_balance_and_a_sinking_part(tmp_path):
     write_json(tmp_path / "mix.json", cfg)
     assert run_script("mix_window.py", "mix.json", cwd=tmp_path).returncode == 0
     r = run_script("check_levels.py", "mix.json", cwd=tmp_path)
-    assert "listen to these: 1" in r.stdout and "[shouts] Реплика" in r.stdout
+    assert "listen to these: 1" in r.stdout and "[shouts] A line" in r.stdout
 
 
 def test_a_window_past_the_stems_stops_with_a_warning_instead_of_crashing(tmp_path):
@@ -116,7 +117,7 @@ def fit_one(folder, phrases, next_phrases, pieces):
     (folder / "takes").mkdir(exist_ok=True)
     make_take(folder / "takes" / "01_hero.wav", pieces)
     make_take(folder / "takes" / "02_hero.wav", [(True, 0.5)])
-    lines = [{"id": "01", "who": "hero", "ru": "Раз… два"}, {"id": "02", "who": "hero", "ru": "Три"}]
+    lines = [{"id": "01", "who": "hero", "text": "One… two"}, {"id": "02", "who": "hero", "text": "Three"}]
     write_json(folder / "scene.json", {"lines": lines})
     write_json(folder / "measure.json", {"01": {"phrases": phrases}, "02": {"phrases": next_phrases}})
     r = run_script("autofit.py", "scene.json", "measure.json", "takes", "fit.json", cwd=folder)
@@ -143,9 +144,51 @@ def test_scene_measure_finds_phrases_inside_the_anchors(tmp_path):
     x[SR : 2 * SR, :] = tone(220, 1.0)[:, None]
     x[int(2.5 * SR) : int(3.5 * SR), :] = tone(220, 1.0)[:, None]
     write_wav(tmp_path / "voc.wav", x)
-    write_json(tmp_path / "scene.json", {"lines": [{"id": "01", "who": "hero", "start": 1.0, "end": 3.5, "ru": "Раз… два"}]})
+    write_json(tmp_path / "scene.json", {"lines": [{"id": "01", "who": "hero", "start": 1.0, "end": 3.5, "text": "One… two"}]})
     r = run_script("scene_measure.py", "scene.json", "voc.wav", 0, "measure.json", cwd=tmp_path)
     assert r.returncode == 0, r.stderr
     m = json.load(open(tmp_path / "measure.json"))["01"]
     assert len(m["phrases"]) == 2 and abs(m["talk"] - 2.0) < 0.1
     assert abs(m["f0"] - 220) < 10
+
+
+@pytest.mark.parametrize("text, tiny", [("[nervous] W-what…", True), ("[nervous] Th-this…", True), ("Wh-WHAT", True), ("[nervous] None…", False), ("Re-entry…", False)])
+def test_stammers_of_any_short_length_may_stay_tiny(tmp_path, text, tiny):
+    silence = np.zeros(int(0.4 * SR), dtype=np.float32)
+    write_wav(tmp_path / "01_hero.wav", np.concatenate([tone(300, 0.2), silence, tone(300, 1.0)]))
+    write_json(tmp_path / "scene.json", {"lines": [{"id": "01", "who": "hero", "start": 1.0, "end": 3.5, "text": text}]})
+    write_json(tmp_path / "measure.json", {"01": {"phrases": [[1.0, 1.2], [1.8, 3.0]]}})
+    r = run_script("autofit.py", "scene.json", "measure.json", tmp_path, "fit.json", cwd=tmp_path)
+    assert r.returncode == 0, r.stderr
+    assert (len(json.load(open(tmp_path / "fit.json"))["01"]["parts"]) == 2) == tiny
+
+
+def subtitled_voice(lag):
+    """24 lines of speech, with the subtitles moved away from the voice by lag seconds."""
+    x = np.zeros(120 * SR, dtype=np.float32)
+    lines = []
+    for n in range(24):
+        start = 1.0 + n * 4.5 + (n % 3) * 0.7
+        burst = tone(220, 2.0)
+        x[int(start * SR) : int(start * SR) + len(burst)] = burst
+        lines.append({"id": f"{n:02d}", "who": "hero", "start": round(start - lag, 2), "end": round(start - lag + 2.0, 2), "text": "x"})
+    return x, lines
+
+
+@pytest.mark.parametrize("lag, warned", [(0.0, False), (2.5, True), (-2.5, True)])
+def test_subtitles_from_another_rip_bring_a_warning(tmp_path, lag, warned):
+    x, lines = subtitled_voice(lag)
+    sf.write(tmp_path / "v.wav", x, SR, subtype="FLOAT")
+    write_json(tmp_path / "scene.json", {"lines": lines})
+    r = run_script("scene_measure.py", "scene.json", "v.wav", 0, "m.json", cwd=tmp_path)
+    assert r.returncode == 0, r.stderr
+    assert ("WARNING: subtitles sit about" in r.stdout) == warned
+    if warned:
+        assert f"{lag:+.1f} s" in r.stdout
+
+
+def test_a_short_scene_says_its_timing_was_not_checked(tmp_path):
+    x, lines = subtitled_voice(0.0)
+    sf.write(tmp_path / "v.wav", x, SR, subtype="FLOAT")
+    write_json(tmp_path / "scene.json", {"lines": lines[:5]})
+    assert "not checked" in run_script("scene_measure.py", "scene.json", "v.wav", 0, "m.json", cwd=tmp_path).stdout

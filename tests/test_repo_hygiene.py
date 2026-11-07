@@ -35,6 +35,30 @@ def test_no_secrets_personal_paths_or_named_dubs():
             assert word not in text, f"{f}: {word}"
 
 
+def test_the_repository_is_in_english():
+    # Russian stays only where it is data: the table for Latin words in a Russian line, and its test.
+    allowed = {"skills/anime-redub/scripts/dialogue.py", "tests/test_dialogue.py"}
+    for f in files():
+        text = open(os.path.join(ROOT, f), encoding="utf-8", errors="replace").read()
+        if re.search(r"[\u0400-\u04ff]", text):
+            assert f in allowed, f
+
+
+def test_skill_text_has_nothing_a_launch_argument_could_replace():
+    # Claude Code fills $0, $1 and so on in SKILL.md with the arguments, so a price written as "$1.50" would be corrupted.
+    text = open(os.path.join(ROOT, "skills", "anime-redub", "SKILL.md"), encoding="utf-8").read()
+    assert not re.search(r"\$\d|\$ARGUMENTS", text)
+
+
+def test_the_pipeline_figure_matches_its_generator(tmp_path):
+    source = open(os.path.join(ROOT, "docs", "make_pipeline.py"), encoding="utf-8").read()
+    namespace = {"__name__": "figure", "__file__": str(tmp_path / "make_pipeline.py")}
+    exec(source, namespace)
+    for theme in ("light", "dark"):
+        committed = open(os.path.join(ROOT, "docs", f"pipeline-{theme}.svg"), encoding="utf-8").read()
+        assert committed == namespace["draw"](theme), theme
+
+
 def test_env_file_is_ignored():
     r = subprocess.run(["git", "check-ignore", ".env", "x.mkv", "stems/vocals.wav"], cwd=ROOT, capture_output=True, text=True)
     assert len(r.stdout.splitlines()) == 3

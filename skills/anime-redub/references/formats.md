@@ -2,11 +2,13 @@
 
 All times are seconds of the source file, except part `from` and `to`, which count from the first speech sample of a take.
 
+The target language is not stored in `scene.json` or `characters.json`. It is the `--language` code you pass to `design_voices.py` and `dialogue.py`. The lines and preview text have to be written in it.
+
 ## scene.json
 
 ```json
 {"lines": [
-  {"id": "01", "who": "hero", "start": 429.9, "end": 431.2, "original": "the line as the subtitles have it", "env": "room", "ru": "[softly] Отчего ты молчишь?"}
+  {"id": "01", "who": "hero", "start": 429.9, "end": 431.2, "original": "the line as the subtitles have it", "env": "room", "text": "[softly] Why are you so quiet?"}
 ]}
 ```
 
@@ -17,7 +19,7 @@ All times are seconds of the source file, except part `from` and `to`, which cou
 | `start`, `end` | Anchors from the subtitles. `scene_measure.py` finds the real phrases around them. |
 | `original` | The subtitle or transcript text, in whatever language it came in, for you to translate from. No script reads it. |
 | `env` | Acoustics for this line, a key of `post.envs` in `mix.json`: `narration` and `default` are dry, `room` adds a soft indoor tail, `outdoors` a faint far echo. Add your own in `mix.json`. |
-| `ru` | The text to speak, with tags. Billed in full, tags included. |
+| `text` | The text to speak in the target language, with tags. Billed in full, tags included. |
 | `lead` | Optional, any value. A sound before the first word, such as a gasp, goes before the original's onset, so the word itself stays on it. |
 | `hold` | Optional, true. The take may be slowed down to fill a long drawn-out original line, no slower than `hold_min` (default 0.75). |
 | `next_on` | Optional, on the last line only. Where the next speech begins, when it lies outside this scene. |
@@ -25,23 +27,23 @@ All times are seconds of the source file, except part `from` and `to`, which cou
 ## characters.json
 
 ```json
-{"project": "Моя озвучка",
- "common": "Native Russian speaker with a neutral standard accent. Studio-quality voice-over recording: dry, close microphone, no room echo, no reverb, no background noise.",
+{"project": "My dub",
+ "common": "Neutral standard accent. Studio-quality voice-over recording: dry, close microphone, no room echo, no reverb, no background noise.",
  "characters": [
-  {"key": "hero", "name": "Герой", "role": "наивный молодой герой",
+  {"key": "hero", "name": "Hero", "role": "naive young hero",
    "description": "Young man, about 18. Light, bright tenor...",
-   "text": "[confidently] Нет. Я обязательно вернусь. [nervous] Ч-что это было?..."}
+   "text": "[confidently] No. I will come back, I promise. [nervous] W-what was that?..."}
 ]}
 ```
 
-`text` must be 100 to 1000 characters. `project` prefixes the saved voice's name. `key` matches `who` in the scene.
+`text` is the preview text, written in the target language, and must be 100 to 1000 characters. `project` prefixes the saved voice's name. `key` matches `who` in the scene. `design_voices.py` adds "Native <language> speaker" from `--language`, so leave the language out of `common`.
 
 ## cast.json
 
-Written by `save_voices.py`. To use a voice you already have, write it by hand.
+Written by `save_voices.py`. To use a voice you already have, write it by hand. `generated_voice_id` is the preview it was saved from, and a pick of the same preview is not saved twice.
 
 ```json
-{"hero": {"voice_id": "...", "name": "Моя озвучка Герой", "letter": "A"}}
+{"hero": {"voice_id": "...", "name": "My dub Hero", "letter": "A", "generated_voice_id": "..."}}
 ```
 
 ## measure.json
@@ -73,4 +75,10 @@ The original voice inside a line ends up at `original_gain_db + voice_under_db`.
 
 ## blocks and takes
 
-`make_blocks.py` writes `block_NN.json`, which has the same form as `scene.json`. `dialogue.py` writes into its output folder: `raw/HASH.mp3` with its `.json` and `.scribe.json`, then `takes_HASH/ID_WHO.wav` with a sidecar `.json` holding `first_word`, the seconds from the start of the take to its first word. `--collect` copies the takes into the one folder that `autofit.py` and `mix_window.py` read. The hash covers the text and all settings, so a changed line means a new paid request.
+`make_blocks.py` writes `block_NN.json`, which has the same form as `scene.json`, and removes earlier `block_NN.json` files from that folder. Other names, such as `small_05.json`, stay. `dialogue.py` writes into its output folder: `raw/HASH.mp3` with its `.json` and `.scribe.json`, then `takes_HASH/ID_WHO.wav` with a sidecar `.json` holding `first_word`, the seconds from the start of the take to its first word. `--collect` copies the takes into the one folder that `autofit.py` and `mix_window.py` read. The hash covers the text, the language and all settings, so a changed line or language means a new paid request.
+
+`design_voices.py` writes `KEY.json` beside each character's previews, with the `language` they were made for and what was `sent`. A rerun with another `--language` in the same folder is refused. To redo a character, delete `previews/KEY.json`, which is billed again.
+
+## budget.json
+
+Written by `budget.py set USD` in the working folder: `limit` and `spent`, in US dollars. Each paid script adds its estimated cost just before sending a request, gives it back only on an HTTP error, and refuses a request that would pass the limit. Without the file there is no limit, and each paid script prints `budget: NO LIMIT`. Edit it or run `budget.py set USD` to change the limit.

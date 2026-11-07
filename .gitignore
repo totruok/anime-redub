@@ -24,6 +24,7 @@ takes/
 gen/
 out/
 previews/
+budget.json*
 
 # Secrets and environments.
 .env

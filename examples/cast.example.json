@@ -1,4 +1,4 @@
 {
- "hero": {"voice_id": "your-voice-id", "name": "Моя озвучка Герой", "letter": "A"},
- "rival": {"voice_id": "your-voice-id", "name": "Моя озвучка Соперник", "letter": "C"}
+ "hero": {"voice_id": "your-voice-id", "name": "My dub Hero", "letter": "A"},
+ "rival": {"voice_id": "your-voice-id", "name": "My dub Rival", "letter": "C"}
 }

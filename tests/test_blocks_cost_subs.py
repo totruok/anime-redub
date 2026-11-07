@@ -7,14 +7,14 @@ from conftest import run_script, write_json
 
 
 def line(i, chars, start, end):
-    return {"id": f"{i:02d}", "who": "hero", "start": start, "end": end, "ru": "а" * chars}
+    return {"id": f"{i:02d}", "who": "hero", "start": start, "end": end, "text": "a" * chars}
 
 
 def test_blocks_keep_order_stay_under_limit_and_cut_at_the_longest_pause():
     lines = [line(1, 300, 0, 1), line(2, 300, 1.1, 2), line(3, 300, 12, 13), line(4, 300, 13.1, 14), line(5, 300, 14.2, 15)]
     blocks = make_blocks.split(lines, 1000)
     assert [l["id"] for b in blocks for l in b] == ["01", "02", "03", "04", "05"]
-    assert all(sum(len(l["ru"]) for l in b) <= 1000 for b in blocks)
+    assert all(sum(len(l["text"]) for l in b) <= 1000 for b in blocks)
     assert blocks[0][-1]["id"] == "02"  # the 10 s pause, not the last line that fits
 
 
@@ -28,7 +28,7 @@ def test_blocks_refuse_a_line_over_the_limit():
 
 
 def test_cost_of_the_measured_scene():
-    lines = [{"ru": "[tag] " + "а" * 94}] * 20  # 2000 characters
+    lines = [{"text": "[tag] " + "a" * 94}] * 20  # 2000 characters
     e = cost.estimate(lines)
     assert abs(e["generation"] - 0.16) < 1e-9
     assert e["spoken"] == 94 * 20
@@ -56,7 +56,7 @@ def test_subtitles_ass_and_srt_become_a_draft(tmp_path):
 
 
 def test_scribe_lines_become_a_draft_at_source_times(tmp_path):
-    tsv = tmp_path / "jp.lines.tsv"
+    tsv = tmp_path / "source.lines.tsv"
     tsv.write_text("1.00\t2.00\tspeaker_0\tこんにちは\n50.00\t51.00\tspeaker_1\tさようなら\n", encoding="utf-8")
     draft = tmp_path / "scene.json"
     r = run_script("subs_window.py", tsv, 100, 120, "--offset", 100, "--draft", draft)
@@ -65,11 +65,48 @@ def test_scribe_lines_become_a_draft_at_source_times(tmp_path):
 
 
 def test_an_unfinished_draft_is_refused_before_it_can_cost_anything(tmp_path):
-    write_json(tmp_path / "scene.json", {"lines": [{"id": "01", "who": "?", "start": 0, "end": 1, "ru": ""}]})
+    write_json(tmp_path / "scene.json", {"lines": [{"id": "01", "who": "?", "start": 0, "end": 1, "text": ""}]})
     for script, args in (("cost.py", ["scene.json"]), ("make_blocks.py", ["scene.json", "blocks"])):
         r = run_script(script, *args, cwd=tmp_path)
         assert r.returncode != 0 and "01" in r.stderr, script
     assert not (tmp_path / "blocks").exists()
+
+
+def test_a_line_with_nothing_to_say_is_refused(tmp_path):
+    for text in ("…", "[sighs] …", "[sighs]", "..."):
+        write_json(tmp_path / "scene.json", {"lines": [{"id": "07", "who": "hero", "start": 0, "end": 1, "text": text}]})
+        r = run_script("make_blocks.py", "scene.json", "blocks", cwd=tmp_path)
+        assert r.returncode != 0 and "07" in r.stderr, text
+
+
+def test_a_new_draft_does_not_wipe_a_written_script(tmp_path):
+    (tmp_path / "a.srt").write_text("1\n00:00:01,000 --> 00:00:02,000\nHi\n\n", encoding="utf-8")
+    run = lambda *extra: run_script("subs_window.py", "a.srt", 0, 9, "--draft", "scene.json", *extra, cwd=tmp_path)  # noqa: E731
+    assert run().returncode == 0
+    assert run().returncode == 0  # still blank: free to replace
+    write_json(tmp_path / "scene.json", {"lines": [{"id": "01", "who": "hero", "text": "Written"}]})
+    r = run()
+    assert r.returncode != 0 and "--force" in r.stderr
+    assert json.load(open(tmp_path / "scene.json"))["lines"][0]["text"] == "Written"
+    assert run("--force").returncode == 0
+    assert json.load(open(tmp_path / "scene.json"))["lines"][0]["text"] == ""
+
+
+def test_a_missing_take_says_what_to_do(tmp_path):
+    write_json(tmp_path / "scene.json", {"lines": [{"id": "01", "who": "hero", "text": "x"}]})
+    write_json(tmp_path / "measure.json", {"01": {"phrases": [[0, 1]]}})
+    (tmp_path / "takes").mkdir()
+    r = run_script("autofit.py", "scene.json", "measure.json", "takes", "fit.json", cwd=tmp_path)
+    assert r.returncode != 0 and "no take for line 01" in r.stderr
+
+
+def test_a_new_split_leaves_no_stale_block_and_keeps_hand_made_ones(tmp_path):
+    (tmp_path / "blocks").mkdir()
+    write_json(tmp_path / "blocks" / "block_09.json", {"lines": []})
+    write_json(tmp_path / "blocks" / "small_05.json", {"lines": []})
+    write_json(tmp_path / "scene.json", {"lines": [line(1, 10, 0, 1)]})
+    assert run_script("make_blocks.py", "scene.json", "blocks", cwd=tmp_path).returncode == 0
+    assert sorted(os.listdir(tmp_path / "blocks")) == ["block_01.json", "small_05.json"]
 
 
 def test_doctor_runs_and_never_prints_the_key(tmp_path):

@@ -78,7 +78,7 @@ def real_length(gaps, length):
 
 
 def main():
-    scene = json.load(open(sys.argv[1]))
+    scene = json.load(open(sys.argv[1], encoding="utf-8"))
     meas = json.load(open(sys.argv[2]))
     takes = sys.argv[3]
     lines = scene["lines"]
@@ -111,7 +111,7 @@ def main():
         limit = next_on - GAP_TO_NEXT
 
         # match original pauses to take gaps in order, over the whole line
-        min_part = 0.1 if re.match(r"^(\[[^\]]*\]\s*)*\w-", l["ru"]) else 0.3  # stammers may be tiny
+        min_part = 0.1 if re.match(r"^(\[[^\]]*\]\s*)*(\w-|(\w{2,3})-\3)", l["text"], re.I) else 0.3  # stammers may be tiny
         matches = match_pauses(groups, gaps, length)
         starts, cuts, begin = [groups[0][0]], [], 0.0
         for pause_i, gap_i in matches:

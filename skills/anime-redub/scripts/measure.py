@@ -41,8 +41,9 @@ def speech_bounds(x, sr=SR, floor_db=-38.0, win=0.02):
 
 def latest_take(takes, line_id):
     found = [p for ext in ("mp3", "wav") for p in glob.glob(os.path.join(takes, f"{line_id}_*.{ext}"))]
-    files = sorted(found, key=os.path.getmtime)
-    return files[-1] if files else None
+    if not found:
+        raise SystemExit(f"no take for line {line_id} in {takes}: run dialogue.py with --collect {takes} for the block that holds it, or take the line out of the scene")
+    return max(found, key=os.path.getmtime)
 
 
 def main():
@@ -75,7 +76,7 @@ def main():
             ss, ee = speech_bounds(stem[lo:hi].astype(np.float32), sr=stem_sr, floor_db=-30.0)
             on = f"{(lo + ss) / stem_sr + a.stem_start:.2f}"
             off = f"{(lo + ee) / stem_sr + a.stem_start:.2f}"
-        print(f"{l['id']}  {l['who']:<8} {win:5.2f}  {speech:5.2f}  {speech / win:5.2f}  {gap:7.2f}  {on:>7}  {off:>8}  {l['ru']}", flush=True)
+        print(f"{l['id']}  {l['who']:<8} {win:5.2f}  {speech:5.2f}  {speech / win:5.2f}  {gap:7.2f}  {on:>7}  {off:>8}  {l['text']}", flush=True)
 
 
 if __name__ == "__main__":
